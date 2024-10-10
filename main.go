@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/ed25519"
 	"encoding/base32"
+	"fmt"
 	"golang.org/x/crypto/sha3"
 	"io"
 	"log"
@@ -35,7 +36,7 @@ func genKeys(rand io.Reader) Keys {
 
 // https://github.com/torproject/torspec/blob/12271f0e6db00dee9600425b2de063e02f19c1ee/rend-spec-v3.txt#L2268-L2327
 func expandPrivateKey(prik ed25519.PrivateKey) [64]byte {
-	h := sha3.Sum512(prik)
+	h := sha3.Sum512(prik[:32])
 	h[0] &= 248
 	h[31] &= 63
 	h[31] |= 64
@@ -45,12 +46,12 @@ func expandPrivateKey(prik ed25519.PrivateKey) [64]byte {
 func main() {
 	var checksumHashBuf bytes.Buffer
 	var onionUrlHash bytes.Buffer
-	var publicKeyBuf bytes.Buffer
-	var privateKeyBuf bytes.Buffer
+
 	checksumVersion := []byte{0x03}
 	checksumString := []byte(".onion checksum")
-	publicKeyHeader := []byte("== ed25519v1-public: type0 ==\x00\x00\x00")
-	privateKeyHeader := []byte("== ed25519v1-secret: type0 ==\x00\x00\x00")
+
+	publicKeyBuf := bytes.NewBufferString("== ed25519v1-secret: type0 ==\x00\x00\x00")
+	privateKeyBuf := bytes.NewBufferString("== ed25519v1-secret: type0 ==\x00\x00\x00")
 
 	// ed25519 keys generated
 	k := genKeys(nil)
@@ -70,13 +71,11 @@ func main() {
 	onionUrl := base32.StdEncoding.EncodeToString(onionUrlHash.Bytes())
 	expandPri := expandPrivateKey(k.Pri)
 
-	publicKeyBuf.Write(publicKeyHeader)
 	publicKeyBuf.Write(k.Pub)
-	privateKeyBuf.Write(privateKeyHeader)
 	privateKeyBuf.Write(expandPri[:])
 
 	_ = os.WriteFile("hs_ed25519_public_key", publicKeyBuf.Bytes(), 0600)
 	_ = os.WriteFile("hs_ed25519_secret_key", privateKeyBuf.Bytes(), 0600)
-	_ = os.WriteFile("hostname", []byte(strings.ToLower(onionUrl+".onion")), 0600)
+	_ = os.WriteFile("hostname", []byte(strings.ToLower(fmt.Sprintf("%s.onion", onionUrl))), 0600)
 
 }
