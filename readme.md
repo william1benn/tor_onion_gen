@@ -12,3 +12,9 @@ _Torspec onion outline_
 * Configuration of onion_address = base32(PUBKEY | CHECKSUM | VERSION) + ".onion"
 * Configuration of checksum = H(".onion checksum" | PUBKEY | VERSION)[:2]
 * Private key expansion referenced from A.2. Tor's key derivation scheme bitwise operations
+
+
+**Build and run container docker**
+`docker build -t vanitygen:1 .`
+`docker run -v local_directory:/onion_dir -e PREFIX="tor" vanityonion:1`
+_find assets in attached volume_ 
